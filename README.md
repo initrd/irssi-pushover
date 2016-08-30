@@ -6,6 +6,8 @@ Plugin for irssi (a console based IRC client) to send push-notifications using p
 This allows you to be notified when someone messages/mentions you on IRC, 
 when you're not online.
 
+This fork adds cooldown functionality to reduce the number of notifications, especially while
+having a conversation
 
 # Installation
 
@@ -35,3 +37,5 @@ when you're not online.
   4. /pushignore help - should get you started in populating the ignore list.
   5. /set pushover_only_if_away [on|off] - if set to on, then you'll 
         need to be set to away before we send notifications.
+  6. /set pushover_cooldown 1 - to turn on cooldown
+  7. /set pushover_cooldownpernick 1 - to turn on per-nick cooldown intervals
