@@ -1,5 +1,7 @@
-# Push hilights and private  while away
+# Push hilights and private while away
 # Author: Marcus Carlsson <carlsson.marcus@gmail.com>
+#
+# cooldown function adapted from https://github.com/jaxbot/irssi-pushbullet-notifications
 
 use strict;
 use warnings;
@@ -21,7 +23,7 @@ $VERSION = '0.2.1';
 );
 
 my $pushover_ignorefile;
-
+my %nick_ts;
 
 sub cmd_help {
     my $out = <<'HELP_EOF';
@@ -54,6 +56,31 @@ sub debug {
     my $text = shift;
     my @caller = caller(1);
     Irssi::print('From '.$caller[3].': '.$text);
+}
+
+sub cooldown {
+    my $nick = shift;
+    my $ret = 1;
+
+    my $cooldown = Irssi::settings_get_int('pushover_cooldown');
+    my $cooldown_pernick = Irssi::settings_get_bool('pushover_cooldownpernick');
+
+    if(!$cooldown_pernick) {
+        $nick = "none";
+    }
+
+    if (exists $nick_ts{$nick}) {
+        if (($nick_ts{$nick} + $cooldown) > time) {
+            debug("$nick is in cooldown, not sending notification.");
+            $ret = 0;
+        }
+        $nick_ts{$nick} = time;
+    }
+    else {
+        $nick_ts{$nick} = time;
+    }
+
+    return $ret;
 }
 
 sub send_push {
@@ -98,7 +125,9 @@ sub msg_pub {
 
     if ($data =~ /$safeNick/i) {
         debug('Got pub msg.');
-        send_push($target, $nick.': '.strip_formating($data));
+        if(cooldown($nick)) {
+            send_push($target, $nick.': '.strip_formating($data));
+        }
     }
 }
 
@@ -129,7 +158,10 @@ sub msg_pri {
         return;
     }
     debug('Got priv msg.');
-    send_push('Priv, '.$nick, strip_formating($data));
+
+    if(cooldown($nick)) {
+        send_push('Priv, '.$nick, strip_formating($data));
+    }
 }
 
 sub msg_kick {
@@ -288,6 +320,8 @@ Irssi::settings_add_bool($IRSSI{'name'}, 'pushover_only_if_away', 0);
 Irssi::settings_add_str($IRSSI{'name'}, 'pushover_ignorefile', Irssi::get_irssi_dir().'/pushover_ignores');
 Irssi::settings_add_str($IRSSI{'name'}, 'pushover_ignorechannels', '');
 Irssi::settings_add_str($IRSSI{'name'}, 'pushover_sound', 'siren');
+Irssi::settings_add_int($IRSSI{'name'}, 'pushover_cooldown', 0);
+Irssi::settings_add_bool($IRSSI{'name'}, 'pushover_cooldownpernick', 1);
 
 Irssi::command_bind('help pushignore', \&cmd_help);
 Irssi::command_bind('pushignore help', \&cmd_help);
